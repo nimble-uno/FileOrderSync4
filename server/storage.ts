@@ -1,86 +1,87 @@
-import { users, type User, type InsertUser, type Order } from "@shared/schema";
+import { users, orders, type User, type InsertUser, type Order } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   getOrder(id: string): Promise<Order | undefined>;
   createOrder(id: string): Promise<Order>;
   updateOrder(id: string, data: Partial<Order>): Promise<Order>;
   getAllOrders(): Promise<Order[]>;
   deleteOrder(id: string): Promise<void>;
-  
+
   sessionStore: session.SessionStore;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private orders: Map<string, Order>;
+export class DatabaseStorage implements IStorage {
   sessionStore: session.SessionStore;
-  currentId: number;
 
   constructor() {
-    this.users = new Map();
-    this.orders = new Map();
-    this.currentId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async getOrder(id: string): Promise<Order | undefined> {
-    return this.orders.get(id);
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    return order;
   }
 
   async createOrder(id: string): Promise<Order> {
-    const order: Order = {
-      id,
-      hasUploaded: false,
-      files: { videos: [], images: [] },
-      songRequest: "",
-      createdAt: new Date().toISOString(),
-    };
-    this.orders.set(id, order);
+    const [order] = await db
+      .insert(orders)
+      .values({
+        id,
+        hasUploaded: false,
+        files: { videos: [], images: [] },
+        songRequest: "",
+        createdAt: new Date().toISOString(),
+      })
+      .returning();
     return order;
   }
 
   async updateOrder(id: string, data: Partial<Order>): Promise<Order> {
-    const order = await this.getOrder(id);
-    if (!order) throw new Error("Order not found");
-    const updatedOrder = { ...order, ...data };
-    this.orders.set(id, updatedOrder);
-    return updatedOrder;
+    const [updated] = await db
+      .update(orders)
+      .set(data)
+      .where(eq(orders.id, id))
+      .returning();
+    if (!updated) throw new Error("Order not found");
+    return updated;
   }
 
   async getAllOrders(): Promise<Order[]> {
-    return Array.from(this.orders.values());
+    return db.select().from(orders);
   }
 
   async deleteOrder(id: string): Promise<void> {
-    this.orders.delete(id);
+    await db.delete(orders).where(eq(orders.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
