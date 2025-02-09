@@ -16,6 +16,7 @@ type Step = "order" | "upload";
 export default function CustomerUpload() {
   const [step, setStep] = useState<Step>("order");
   const [orderId, setOrderId] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
@@ -64,27 +65,33 @@ export default function CustomerUpload() {
     const files = Array.from(e.target.files || []);
     const maxSize = 3 * 1024 * 1024; // 3MB
 
-    const promises = files.map(file => {
-      return new Promise<{name: string, data: string}>((resolve, reject) => {
+    setIsUploading(true);
+    try {
+      const uploadPromises = files.map(async file => {
         if (file.size > maxSize) {
-          reject(new Error(`File ${file.name} exceeds 3MB limit`));
-          return;
+          throw new Error(`File ${file.name} exceeds 3MB limit`);
         }
 
-        const reader = new FileReader();
-        reader.onload = () => {
-          resolve({
-            name: file.name,
-            data: reader.result as string
-          });
-        };
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
-      });
-    });
+        const formData = new FormData();
+        formData.append('file', file);
 
-    try {
-      const fileData = await Promise.all(promises);
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) {
+          throw new Error(`Failed to upload ${file.name}`);
+        }
+
+        const { url } = await res.json();
+        return {
+          name: file.name,
+          url
+        };
+      });
+
+      const fileData = await Promise.all(uploadPromises);
       uploadForm.setValue(type, fileData);
     } catch (error: any) {
       toast({
@@ -92,6 +99,8 @@ export default function CustomerUpload() {
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -140,6 +149,7 @@ export default function CustomerUpload() {
                           accept="video/*"
                           onChange={e => handleFileChange(e, "videos")}
                           multiple
+                          disabled={isUploading}
                         />
                       </FormControl>
                       <FormMessage />
@@ -158,6 +168,7 @@ export default function CustomerUpload() {
                           accept="image/*"
                           onChange={e => handleFileChange(e, "images")}
                           multiple
+                          disabled={isUploading}
                         />
                       </FormControl>
                       <FormMessage />
@@ -177,9 +188,9 @@ export default function CustomerUpload() {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={isUploading}>
                   <UploadIcon className="mr-2 h-4 w-4" />
-                  Upload Files
+                  {isUploading ? "Uploading..." : "Upload Files"}
                 </Button>
               </form>
             </Form>

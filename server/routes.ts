@@ -3,9 +3,28 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { uploadOrderSchema } from "@shared/schema";
+import { put } from '@vercel/blob';
+import { randomUUID } from "crypto";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  app.post("/api/upload", async (req, res) => {
+    try {
+      if (!req.files || !req.files.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const file = req.files.file;
+      const blob = await put(randomUUID(), file, {
+        access: 'public',
+      });
+
+      res.json({ url: blob.url });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   app.post("/api/orders", async (req, res) => {
     const { id } = req.body;

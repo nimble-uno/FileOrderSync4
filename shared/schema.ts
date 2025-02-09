@@ -12,8 +12,8 @@ export const orders = pgTable("orders", {
   id: text("id").primaryKey(),
   hasUploaded: boolean("has_uploaded").default(false).notNull(),
   files: json("files").$type<{
-    videos: { name: string, data: string }[],
-    images: { name: string, data: string }[]
+    videos: { name: string, url: string }[],
+    images: { name: string, url: string }[]
   }>(),
   songRequest: text("song_request"),
   createdAt: text("created_at").notNull(),
@@ -31,11 +31,11 @@ export const insertOrderSchema = createInsertSchema(orders).pick({
 export const uploadOrderSchema = z.object({
   videos: z.array(z.object({
     name: z.string(),
-    data: z.string()
+    url: z.string().url("Invalid video URL")
   })),
   images: z.array(z.object({
     name: z.string(),
-    data: z.string()
+    url: z.string().url("Invalid image URL")
   })),
   songRequest: z.string().min(1, "Song request is required")
 });
