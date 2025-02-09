@@ -18,11 +18,11 @@ export interface IStorage {
   getAllOrders(): Promise<Order[]>;
   deleteOrder(id: string): Promise<void>;
 
-  sessionStore: session.SessionStore;
+  sessionStore: ReturnType<typeof PostgresSessionStore>;
 }
 
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.SessionStore;
+  sessionStore: ReturnType<typeof PostgresSessionStore>;
 
   constructor() {
     this.sessionStore = new PostgresSessionStore({ 

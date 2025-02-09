@@ -23,7 +23,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Add CORS headers for production
+// Update CORS configuration to handle Vercel deployment
 app.use((req, res, next) => {
   const allowedOrigins = ['http://localhost:5000'];
 
@@ -115,7 +115,7 @@ app.use((req, res, next) => {
   }
 
   const PORT = process.env.PORT || 5000;
-  server.listen(PORT, "0.0.0.0", () => {
+  server.listen(Number(PORT), "0.0.0.0", () => {
     log(`serving on port ${PORT}`);
   });
 })();
