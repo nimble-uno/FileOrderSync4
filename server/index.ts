@@ -5,6 +5,7 @@ import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 const upload = multer({
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 3 * 1024 * 1024 // 3MB
   }
@@ -16,7 +17,17 @@ app.use(express.urlencoded({ extended: false, limit: '3mb' }));
 // Add multer middleware to handle file uploads
 app.use((req, res, next) => {
   if (req.path === '/api/upload') {
-    return upload.single('file')(req, res, next);
+    return upload.single('file')(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ message: 'File size cannot exceed 3MB' });
+        }
+        return res.status(400).json({ message: err.message });
+      } else if (err) {
+        return res.status(500).json({ message: 'Error uploading file' });
+      }
+      next();
+    });
   }
   next();
 });
@@ -59,7 +70,7 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    console.error('Error:', err);
   });
 
   if (app.get("env") === "development") {

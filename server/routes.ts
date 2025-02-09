@@ -11,17 +11,18 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/upload", async (req, res) => {
     try {
-      if (!req.files || !req.files.file) {
+      if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const file = req.files.file;
-      const blob = await put(randomUUID(), file, {
+      const blob = await put(randomUUID(), req.file.buffer, {
         access: 'public',
+        contentType: req.file.mimetype,
       });
 
       res.json({ url: blob.url });
     } catch (error: any) {
+      console.error('Upload error:', error);
       res.status(500).json({ message: error.message });
     }
   });
