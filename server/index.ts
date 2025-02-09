@@ -3,7 +3,7 @@ import multer from "multer";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
-const app = express();
+export const app = express();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -114,8 +114,10 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  const PORT = process.env.PORT || 5000;
-  server.listen(Number(PORT), "0.0.0.0", () => {
-    log(`serving on port ${PORT}`);
-  });
+  if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 5000;
+    server.listen(Number(PORT), "0.0.0.0", () => {
+      log(`serving on port ${PORT}`);
+    });
+  }
 })();
