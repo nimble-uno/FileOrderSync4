@@ -23,7 +23,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Update CORS configuration to handle Vercel deployment
+// Update the CORS configuration
 app.use((req, res, next) => {
   const allowedOrigins = ['http://localhost:5000'];
 
