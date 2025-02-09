@@ -15,12 +15,21 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const blob = await put(randomUUID(), req.file.buffer, {
+      // Get the file extension from the original filename
+      const originalExt = req.file.originalname.split('.').pop() || '';
+      const uniqueId = randomUUID();
+      const blobName = `${uniqueId}.${originalExt}`;
+
+      const blob = await put(blobName, req.file.buffer, {
         access: 'public',
         contentType: req.file.mimetype,
       });
 
-      res.json({ url: blob.url });
+      res.json({ 
+        url: blob.url,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype
+      });
     } catch (error: any) {
       console.error('Upload error:', error);
       res.status(500).json({ message: error.message });

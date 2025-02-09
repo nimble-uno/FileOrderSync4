@@ -39,14 +39,10 @@ export default function SellerDashboard() {
     order.id.toLowerCase().includes(search.toLowerCase())
   );
 
-  const downloadFiles = (order: Order) => {
-    if (!order.files) return;
-    
+  const downloadFile = (file: { name: string, url: string }) => {
     const link = document.createElement('a');
-    const content = JSON.stringify(order.files, null, 2);
-    const file = new Blob([content], { type: 'application/json' });
-    link.href = URL.createObjectURL(file);
-    link.download = `order-${order.id}-files.json`;
+    link.href = file.url;
+    link.download = file.name; 
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -104,22 +100,51 @@ export default function SellerDashboard() {
                         Files: {order.files?.videos.length || 0} videos,{" "}
                         {order.files?.images.length || 0} images
                       </p>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => downloadFiles(order)}
-                        >
-                          <DownloadIcon className="h-4 w-4 mr-2" />
-                          Download
-                        </Button>
+                      <div className="flex flex-col gap-2">
+                        {order.files?.videos.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium mb-1">Videos:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {order.files.videos.map((video, idx) => (
+                                <Button
+                                  key={idx}
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => downloadFile(video)}
+                                >
+                                  <DownloadIcon className="h-4 w-4 mr-2" />
+                                  Video {idx + 1}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {order.files?.images.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium mb-1">Images:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {order.files.images.map((image, idx) => (
+                                <Button
+                                  key={idx}
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => downloadFile(image)}
+                                >
+                                  <DownloadIcon className="h-4 w-4 mr-2" />
+                                  Image {idx + 1}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         <Button
                           variant="destructive"
                           size="sm"
                           onClick={() => deleteMutation.mutate(order.id)}
+                          className="mt-2"
                         >
                           <TrashIcon className="h-4 w-4 mr-2" />
-                          Delete
+                          Delete Order
                         </Button>
                       </div>
                     </>
